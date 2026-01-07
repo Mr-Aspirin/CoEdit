@@ -1,0 +1,17 @@
+# IDEs and Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Vercel
+.vercel/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+deploy.md
