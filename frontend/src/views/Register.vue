@@ -28,6 +28,7 @@
     </el-card>
   </div>
 </template>
+
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -54,9 +55,11 @@ const handleRegister = async () => {
     ElMessage.success('Registration successful, please login')
     router.push('/login')
   } catch (error) {
+    // Error handled in request interceptor
   }
 }
 </script>
+
 <style scoped>
 .register-container {
   display: flex;

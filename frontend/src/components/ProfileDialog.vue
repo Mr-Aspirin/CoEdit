@@ -36,9 +36,11 @@
           </el-form-item>
         </el-form>
       </el-tab-pane>
+      
       <el-tab-pane label="Security" name="security">
         <el-form :model="securityForm" label-width="120px">
           <el-alert title="Verify identity to change password" type="info" :closable="false" style="margin-bottom: 20px" />
+          
           <div v-if="!verified">
              <el-form-item label="Security Question">
                 <el-input v-model="securityQuestionDisplay" disabled />
@@ -50,6 +52,7 @@
                 <el-button type="primary" @click="verifyIdentity">Verify</el-button>
              </el-form-item>
           </div>
+          
           <div v-else>
              <el-form-item label="New Password">
                 <el-input v-model="securityForm.newPassword" type="password" show-password placeholder="Leave empty to keep unchanged" />
@@ -70,6 +73,7 @@
     </el-tabs>
   </el-dialog>
 </template>
+
 <script setup>
 import { ref, computed } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
@@ -132,7 +136,7 @@ const fetchData = async () => {
 const handleAvatarUpload = async (options) => {
   try {
     const res = await uploadFile(options.file)
-    form.value.avatar = res 
+    form.value.avatar = res // Assuming res is the URL path
     ElMessage.success('Avatar uploaded')
   } catch (e) {
     ElMessage.error('Upload failed')
@@ -143,7 +147,7 @@ const saveBasic = async () => {
   try {
     await updateUserProfile(form.value)
     ElMessage.success('Profile updated')
-    
+    // Update store if it's current user
     if (userStore.user && userStore.user.id === form.value.id) {
         userStore.user = { ...userStore.user, ...form.value }
     }
@@ -186,6 +190,7 @@ const saveSecurity = async () => {
   }
 }
 </script>
+
 <style scoped>
 .avatar-uploader .avatar {
   width: 100px;

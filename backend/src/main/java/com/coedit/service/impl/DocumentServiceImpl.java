@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class DocumentServiceImpl implements DocumentService {
+
     @Autowired
     private DocumentMapper documentMapper;
     
@@ -41,7 +42,7 @@ public class DocumentServiceImpl implements DocumentService {
         BeanUtils.copyProperties(documentDto, document);
         document.setOwnerId(userId);
         document.setVersion(1L);
-        
+        // Initial content if null
         if (document.getContent() == null) {
             document.setContent("");
         }
@@ -85,7 +86,7 @@ public class DocumentServiceImpl implements DocumentService {
             canEdit = true;
         } else {
             DocumentCollaborator dc = collaboratorMapper.findByDocAndUser(id, userId);
-            
+            // Allow ADMIN and EDITOR to edit, and check if status is ACCEPTED
             if (dc != null && "ACCEPTED".equals(dc.getStatus()) && 
                (dc.getPermission().equals("ADMIN") || dc.getPermission().equals("EDITOR"))) {
                 canEdit = true;
@@ -98,8 +99,10 @@ public class DocumentServiceImpl implements DocumentService {
         
         if (documentDto.getTitle() != null) document.setTitle(documentDto.getTitle());
         if (documentDto.getContent() != null) document.setContent(documentDto.getContent());
-
+        
+        // Optimistic locking / Versioning
         if (documentDto.getVersion() != null) {
+             // For simple OT/Last write wins, we might just increment
              document.setVersion(document.getVersion() + 1);
         } else {
              document.setVersion(document.getVersion() + 1);
@@ -117,12 +120,17 @@ public class DocumentServiceImpl implements DocumentService {
         }
         
         if (document.getOwnerId().equals(userId)) {
+            // Owner: Hard delete and notify collaborators
             List<CollaboratorDto> collaborators = collaboratorService.getCollaborators(id);
             for (CollaboratorDto c : collaborators) {
                  notificationService.createNotification(c.getUserId(), "Document " + document.getTitle() + " has been deleted by owner.", "DOC_DELETED", id);
             }
             documentMapper.deleteById(id);
         } else {
+            // Collaborator: Check permission to leave (anyone can leave)
+            // But if user meant "delete" as "remove from my list", then it is leaving.
+            // If they meant "delete the document globally", only Creator can do that per requirements.
+            // Requirement: "User A deletes... removes User A... document still exists"
             DocumentCollaborator dc = collaboratorMapper.findByDocAndUser(id, userId);
             if (dc != null) {
                  collaboratorService.removeCollaborator(id, userId, userId);

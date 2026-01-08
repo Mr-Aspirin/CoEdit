@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.coedit.mapper.DocumentMapper">
+
     <insert id="insert" parameterType="com.coedit.entity.Document" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO documents (title, content, owner_id, version, created_at, updated_at)
         VALUES (#{title}, #{content}, #{ownerId}, #{version}, NOW(), NOW())
     </insert>
+
     <update id="update" parameterType="com.coedit.entity.Document">
         UPDATE documents
         <set>
@@ -15,12 +17,15 @@
         </set>
         WHERE id = #{id}
     </update>
+
     <delete id="deleteById">
         DELETE FROM documents WHERE id = #{id}
     </delete>
+
     <select id="findById" resultType="com.coedit.entity.Document">
         SELECT * FROM documents WHERE id = #{id}
     </select>
+
     <select id="findUserDocuments" resultType="com.coedit.entity.Document">
         SELECT d.*,
                CASE 
@@ -37,12 +42,14 @@
            OR (dc.user_id IS NOT NULL AND dc.status = 'ACCEPTED')
         ORDER BY d.updated_at DESC
     </select>
+
     <select id="searchDocuments" resultType="com.coedit.entity.Document">
         SELECT * FROM documents 
         WHERE title LIKE CONCAT('%', #{keyword}, '%') 
            OR content LIKE CONCAT('%', #{keyword}, '%')
         ORDER BY updated_at DESC
     </select>
+
     <select id="searchDocumentsAdvanced" resultType="com.coedit.entity.Document">
         SELECT d.*,
                uds.folder_id as folderId,
@@ -79,6 +86,7 @@
         <if test="endDate != null">
             AND d.created_at &lt;= #{endDate}
         </if>
+        
         ORDER BY 
         <choose>
             <when test="sortField == 'created_at'">d.created_at</when>
@@ -89,9 +97,11 @@
             <otherwise>DESC</otherwise>
         </choose>
     </select>
+
     <insert id="insertOrUpdateDocumentFolder">
         INSERT INTO user_document_settings (user_id, document_id, folder_id)
         VALUES (#{userId}, #{documentId}, #{folderId})
         ON DUPLICATE KEY UPDATE folder_id = #{folderId}
     </insert>
+
 </mapper>

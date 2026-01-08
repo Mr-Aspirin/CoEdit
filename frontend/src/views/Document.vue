@@ -7,6 +7,7 @@
         <el-button size="small" @click="showCollaborators = true">Collaborators</el-button>
       </div>
     </div>
+    
     <div class="main-content">
       <div class="editor-wrapper">
         <div class="remote-cursors-container">
@@ -46,6 +47,7 @@
         />
       </div>
     </div>
+
     <el-dialog v-model="showCollaborators" title="Collaborators">
       <div class="add-collaborator">
         <template v-if="canManage">
@@ -87,6 +89,8 @@
         </el-table-column>
       </el-table>
     </el-dialog>
+
+    <!-- User Profile Dialog -->
     <el-dialog v-model="showUserProfile" title="User Profile" width="400px">
         <div class="user-profile-card" v-loading="loadingProfile">
            <div style="display: flex; align-items: center; margin-bottom: 20px;">
@@ -107,6 +111,7 @@
     </el-dialog>
   </div>
 </template>
+
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -148,9 +153,11 @@ const filteredCollaborators = computed(() => {
 
 let version = 1
 
+// WebSocket
 let stompClient = null
 let isRemoteChange = false
 
+// Profile Dialog
 const showUserProfile = ref(false)
 const selectedUser = ref({})
 const loadingProfile = ref(false)
@@ -160,7 +167,7 @@ const isInitializing = ref(true)
 const fetchDoc = async () => {
   try {
     isInitializing.value = true
-    contentLoaded.value = false 
+    contentLoaded.value = false // Force re-render to ensure content update
     const doc = await getDocument(docId)
     title.value = doc.title
     content.value = doc.content
@@ -176,26 +183,31 @@ const fetchDoc = async () => {
     await fetchCollaborators()
     checkPermissions()
     contentLoaded.value = true
-
+    
+    // Allow some time for editor to initialize and trigger initial events
     setTimeout(() => {
         isInitializing.value = false
     }, 500)
+    
   } catch (error) {
     console.error(error)
-    
+    // Error message handled by request interceptor
     router.push('/')
   }
 }
+
 
 const checkPermissions = () => {
     if (!userStore.user) return
     const userId = userStore.user.id
     const docOwnerId = ownerId.value
-
+    
+    // Reset
     canEdit.value = false
     canManage.value = false
     canViewCollaborators.value = false
-
+    
+    // Use loose equality or conversion to handle potential string vs number issues
     if (String(userId) === String(docOwnerId)) {
         canEdit.value = true
         canManage.value = true
@@ -214,6 +226,7 @@ const checkPermissions = () => {
             canEdit.value = true
             canManage.value = false
         } else {
+            // VIEWER
             canEdit.value = false
             canManage.value = false
         }
@@ -231,6 +244,7 @@ const addCollaboratorUser = async () => {
     fetchCollaborators()
     newCollaboratorId.value = ''
   } catch (error) {
+    // handled
   }
 }
 
@@ -240,6 +254,7 @@ const removeCollaboratorUser = async (userId) => {
     ElMessage.success('Removed')
     fetchCollaborators()
   } catch (error) {
+    // handled
   }
 }
 
@@ -253,7 +268,7 @@ const updatePermission = async (collaborator) => {
     ElMessage.success('Permission updated')
   } catch (error) {
     ElMessage.error('Failed to update permission')
-    fetchCollaborators() 
+    fetchCollaborators() // Revert changes
   }
 }
 
@@ -305,8 +320,13 @@ const getCollaboratorColor = (id) => {
 const onTextChange = ({ delta, oldContents, source }) => {
   if (source === 'user') {
     autoSave()
-
+    
+    // Broadcast changes
+    // Only allow if user has edit permission (though readOnly prop should prevent this too)
     if (canEdit.value && stompClient && stompClient.connected) {
+      // Use setTimeout to allow the editor to update the selection internally
+      // before we query it. This is crucial for 'Enter' key where the selection update
+      // might lag slightly behind the text-change event.
       setTimeout(() => {
           const quill = editorRef.value?.getQuill()
           let cursorIndex = null
@@ -337,12 +357,15 @@ const onTextChange = ({ delta, oldContents, source }) => {
       }, 0)
     }
   }
-
+  
+  // Only handle LOCAL edits shifting REMOTE cursors here.
+  // Remote edits are handled in the websocket listener.
   if (source === 'user') {
       for (const uid in remoteCursors.value) {
           const cursor = remoteCursors.value[uid]
           if (cursor.index !== undefined && delta && delta.transformPosition) {
               try {
+                 // Local user typed. Remote cursors are not the sender. Priority = false.
                  const newIndex = delta.transformPosition(cursor.index, false)
                  remoteCursors.value[uid].index = newIndex
               } catch (e) {
@@ -356,6 +379,7 @@ const onTextChange = ({ delta, oldContents, source }) => {
 
 const onSelectionChange = ({ range, oldRange, source }) => {
     if (source === 'user' && range) {
+        // Only broadcast cursor if user has edit permission
         if (canEdit.value && stompClient && stompClient.connected) {
              stompClient.send(`/app/doc/${docId}/edit`, {}, JSON.stringify({
                 docId: docId,
@@ -373,16 +397,21 @@ const onSelectionChange = ({ range, oldRange, source }) => {
 const updateCursorPositions = () => {
     const quill = editorRef.value?.getQuill()
     if (!quill) return
-
+    
+    // Find containers to calculate offset
+    // quill.container is the .ql-container element
     const quillContainer = quill.container
-
+    // We need the .remote-cursors-container element. 
+    // Since we don't have a ref for it, we query it. 
+    // Ideally use a ref, but querySelector is fine here as scoped.
     const cursorContainer = document.querySelector('.remote-cursors-container')
     
     if (!quillContainer || !cursorContainer) return
     
     const containerRect = quillContainer.getBoundingClientRect()
     const wrapperRect = cursorContainer.getBoundingClientRect()
-
+    
+    // Calculate offset of the editor content relative to our cursor container
     const offsetTop = containerRect.top - wrapperRect.top
     const offsetLeft = containerRect.left - wrapperRect.left
     
@@ -390,6 +419,7 @@ const updateCursorPositions = () => {
         const cursor = remoteCursors.value[uid]
         if (cursor.index !== undefined) {
              try {
+                // Check if index is valid
                 const length = quill.getLength()
                 const index = Math.min(cursor.index, length - 1)
                 const bounds = quill.getBounds(index, cursor.length || 0)
@@ -409,10 +439,12 @@ const updateCursorPositions = () => {
     }
 }
 
+// const currentRemoteSender = ref(null)
+
 const connectWebSocket = () => {
   const socket = new SockJS('http://localhost:8080/ws')
   stompClient = Stomp.over(socket)
-  stompClient.debug = () => {} 
+  stompClient.debug = () => {} // disable debug logs
   stompClient.connect({}, frame => {
     console.log('Connected: ' + frame)
     stompClient.subscribe(`/topic/doc/${docId}`, message => {
@@ -456,6 +488,9 @@ const connectWebSocket = () => {
         
         if (body.type === 'EDIT' && body.delta) {
             if (quill) {
+                // Manually transform cursors BEFORE applying content
+                // We need the Delta class. Quill instance has it attached usually or we can import.
+                // Accessing Delta implementation from Quill global or instance
                 const Delta = Quill.imports.delta
                 const changeDelta = new Delta(body.delta)
                 
@@ -463,6 +498,10 @@ const connectWebSocket = () => {
                     const cursor = remoteCursors.value[uid]
                     if (cursor.index !== undefined) {
                         try {
+                             // If isSender, we used to rely on transformPosition(true) to move their cursor.
+                             // But now the sender sends their NEW exact cursor position in the EDIT message.
+                             // So we only need to transform OTHER people's cursors (isSender=false).
+                             // If isSender, we will overwrite their position with body.cursorIndex below anyway.
                              const isSender = (String(uid) === String(body.senderId))
                              
                              if (!isSender) {
@@ -476,7 +515,8 @@ const connectWebSocket = () => {
                 }
 
                 quill.updateContents(body.delta)
-
+                
+                // Update sender's cursor position explicitly if provided
                 if (body.cursorIndex !== undefined) {
                     const existingTimer = remoteCursors.value[body.senderId]?.timer
                     
@@ -488,7 +528,7 @@ const connectWebSocket = () => {
                         timestamp: Date.now(),
                         timer: existingTimer
                     }
-                    
+                    // Reset timer
                      if (remoteCursors.value[body.senderId].timer) clearTimeout(remoteCursors.value[body.senderId].timer)
                      
                      const timerId = setTimeout(() => {
@@ -509,21 +549,25 @@ const connectWebSocket = () => {
                 name: body.senderName,
                 color: body.senderColor || getCollaboratorColor(body.senderId),
                 timestamp: Date.now(),
-                
+                // Preserve the existing timer reference to clear it properly
                 timer: remoteCursors.value[body.senderId]?.timer
             }
             updateCursorPositions()
-
+            
+            // Clear cursor after inactivity (optional)
             if (remoteCursors.value[body.senderId].timer) clearTimeout(remoteCursors.value[body.senderId].timer)
-
+            
+            // Use a local variable to capture the current timer ID for this specific cursor update
              const timerId = setTimeout(() => {
+                 // Check if the cursor still exists and if the timer ID matches (to avoid race conditions)
                  if (remoteCursors.value[body.senderId] && remoteCursors.value[body.senderId].timer === timerId) {
                       delete remoteCursors.value[body.senderId]
                  }
-             }, 10000) 
+             }, 10000) // 10 seconds timeout
             
             remoteCursors.value[body.senderId].timer = timerId
         } else if (!body.type && body.content) {
+            // Fallback for old messages or full sync
              if (content.value !== body.content) {
                  content.value = body.content
             }
@@ -533,7 +577,9 @@ const connectWebSocket = () => {
   })
 }
 
+// Watch for Quill initialization to add scroll listener
 const onEditorReady = (quill) => {
+    // Add scroll listener
     if (quill.root) {
         quill.root.addEventListener('scroll', updateCursorPositions)
     }
@@ -545,7 +591,7 @@ const goBack = () => {
 
 const handleViewProfile = async (user) => {
     showUserProfile.value = true
-    selectedUser.value = user 
+    selectedUser.value = user // Basic info first
     loadingProfile.value = true
     try {
         if (user.userId || user.id) {
@@ -558,7 +604,9 @@ const handleViewProfile = async (user) => {
         loadingProfile.value = false
     }
 }
+
 </script>
+
 <style scoped>
 .document-container {
   height: 100vh;
@@ -610,7 +658,7 @@ const handleViewProfile = async (user) => {
     bottom: 0;
     pointer-events: none;
     z-index: 99;
-    overflow: hidden;  
+    overflow: hidden; /* To prevent cursors from flying out */
 }
 
 .remote-cursor {
@@ -636,10 +684,13 @@ const handleViewProfile = async (user) => {
     padding: 1px 4px;
     border-radius: 2px;
     white-space: nowrap;
-    opacity: 0;  
+    opacity: 0; /* Hide by default */
     transition: opacity 0.2s;
 }
 
+/* Show flag on hover logic could be tricky with pointer-events none, 
+   but we can make the flag visible by default for now or add logic.
+   Let's make it visible */
 .cursor-flag {
     opacity: 1; 
 }

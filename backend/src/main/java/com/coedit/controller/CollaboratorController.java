@@ -20,6 +20,7 @@ import java.util.Map;
 @RequestMapping("/api/collaborator")
 @CrossOrigin(origins = "*")
 public class CollaboratorController extends BaseController {
+
     @Autowired
     private CollaboratorService collaboratorService;
 
@@ -28,6 +29,7 @@ public class CollaboratorController extends BaseController {
 
     @Autowired
     private DocumentService documentService;
+
 
     @PostMapping("/add")
     public Result<String> add(@RequestBody Map<String, Object> payload, HttpServletRequest request) {
@@ -59,7 +61,7 @@ public class CollaboratorController extends BaseController {
 
         try {
             Long documentId = Long.valueOf(payload.get("documentId").toString());
-            Long userId = Long.valueOf(payload.get("userId").toString()); 
+            Long userId = Long.valueOf(payload.get("userId").toString()); // The user being removed
 
             collaboratorService.removeCollaborator(documentId, userId, currentUser.getId());
             

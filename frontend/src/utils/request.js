@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus'
 const service = axios.create({
   baseURL: 'http://localhost:8080/api',
   timeout: 5000,
-  withCredentials: true 
+  withCredentials: true // Important for sessions
 })
 
 service.interceptors.request.use(

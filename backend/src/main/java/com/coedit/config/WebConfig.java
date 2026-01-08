@@ -9,11 +9,13 @@ import java.io.File;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+
     @Value("${file.upload-dir:uploads}")
     private String uploadDir;
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // Ensure absolute path with trailing slash
         String path = new File(uploadDir).getAbsolutePath();
         if (!path.endsWith(File.separator)) {
             path += File.separator;

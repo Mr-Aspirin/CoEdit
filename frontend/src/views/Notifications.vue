@@ -28,6 +28,7 @@
     </el-card>
   </div>
 </template>
+
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -47,6 +48,7 @@ const fetchNotifications = async () => {
   try {
     notifications.value = await getNotifications()
   } catch (error) {
+    // handled
   }
 }
 
@@ -59,6 +61,7 @@ const deleteNotify = async (id) => {
     await deleteNotification(id)
     fetchNotifications()
   } catch (error) {
+    // handled
   }
 }
 
@@ -74,6 +77,7 @@ const acceptInvite = async (item) => {
   }
 }
 </script>
+
 <style scoped>
 .notifications-container {
   padding: 20px;

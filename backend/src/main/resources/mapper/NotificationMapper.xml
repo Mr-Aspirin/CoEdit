@@ -1,29 +1,37 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.coedit.mapper.NotificationMapper">
+
     <insert id="insert" parameterType="com.coedit.entity.Notification" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO notifications (user_id, content, type, related_id, is_read, is_accepted, created_at)
         VALUES (#{userId}, #{content}, #{type}, #{relatedId}, FALSE, FALSE, NOW())
     </insert>
+
     <delete id="deleteById">
         DELETE FROM notifications WHERE id = #{id}
     </delete>
+
     <select id="findByUserId" resultType="com.coedit.entity.Notification">
         SELECT id, user_id, content, type, related_id, is_read, created_at, is_accepted AS accepted
         FROM notifications 
         WHERE user_id = #{userId} 
         ORDER BY created_at DESC
     </select>
+    
     <update id="markAsRead">
         UPDATE notifications SET is_read = TRUE WHERE id = #{id}
     </update>
+
     <update id="markAsAccepted">
         UPDATE notifications SET is_accepted = TRUE WHERE user_id = #{userId} AND related_id = #{relatedId} AND type = 'INVITE'
     </update>
+
     <update id="markAllAsRead">
         UPDATE notifications SET is_read = TRUE WHERE user_id = #{userId} AND is_read = FALSE
     </update>
+
     <select id="countUnread" resultType="long">
         SELECT COUNT(*) FROM notifications WHERE user_id = #{userId} AND is_read = FALSE
     </select>
+
 </mapper>

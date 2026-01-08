@@ -18,8 +18,9 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/user")
-@CrossOrigin(origins = "*") 
+@CrossOrigin(origins = "*") // Allow all for simple dev
 public class UserController {
+
     @Autowired
     private UserService userService;
 
@@ -47,6 +48,8 @@ public class UserController {
 
     @PutMapping("/profile")
     public Result<UserDto> updateProfile(@RequestBody UserDto userDto) {
+        // In a real app, we'd get the ID from the session/token, but here we might trust the DTO or pass ID
+        // For simplicity, let's assume the DTO contains the ID or we pass it
         return Result.success(userService.updateUserProfile(userDto.getId(), userDto));
     }
 
@@ -66,7 +69,7 @@ public class UserController {
         if (user == null) {
             return Result.error(401, "Not logged in");
         }
-        
+        // Refresh from DB to get latest info
         return Result.success(userService.getUserProfile(user.getId()));
     }
 

@@ -15,6 +15,7 @@ import java.util.List;
 @RequestMapping("/api/notification")
 @CrossOrigin(origins = "*")
 public class NotificationController {
+
     @Autowired
     private NotificationService notificationService;
 

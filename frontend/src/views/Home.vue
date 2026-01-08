@@ -30,7 +30,9 @@
           <el-button type="primary" @click="$router.push('/login')">Login</el-button>
         </div>
       </el-header>
+
       <el-container v-if="userStore.user" style="height: calc(100vh - 60px);">
+        <!-- ... -->
         <el-aside width="250px" class="aside" style="display: flex; flex-direction: column;">
           <div class="folder-header">
             <span>Folders</span>
@@ -63,13 +65,16 @@
               </el-dropdown>
             </el-menu-item>
           </el-menu>
+          
           <div class="notification-area" @click="handleNotificationsClick">
             <el-icon><Bell /></el-icon>
             <span style="margin-left: 10px;">Notifications</span>
             <div v-if="hasUnread" class="notification-dot"></div>
           </div>
         </el-aside>
+
         <el-main>
+          <!-- ... -->
           <div class="actions">
             <el-button type="primary" @click="createNewDoc">New Document</el-button>
             <el-button @click="openAdvancedSearch">Advanced Search</el-button>
@@ -85,6 +90,7 @@
               </template>
             </el-input>
           </div>
+
           <div class="current-path" style="margin: 15px 0; display: flex; justify-content: space-between; align-items: center;">
             <div style="color: #666; font-size: 14px;">
               Current View: <strong>{{ currentFolderName }}</strong>
@@ -95,6 +101,7 @@
             </div>
             <el-button :icon="Refresh" circle @click="fetchDocs" title="Refresh list" />
           </div>
+
           <el-table :data="filteredDocuments" style="width: 100%">
             <el-table-column prop="title" label="Title" />
             <el-table-column prop="ownerName" label="Owner" width="150">
@@ -146,12 +153,16 @@
           </el-table>
         </el-main>
       </el-container>
+
       <el-main v-else class="welcome-box">
         <h2>Welcome to CoEdit</h2>
         <p>Please login to manage your documents.</p>
       </el-main>
     </el-container>
+
     <ProfileDialog v-model="showProfileDialog" :userId="profileUserId" />
+
+    <!-- User Profile Dialog -->
     <el-dialog v-model="showUserProfile" title="User Profile" width="400px">
         <div class="user-profile-card" v-loading="loadingProfile">
            <div style="display: flex; align-items: center; margin-bottom: 20px;">
@@ -170,7 +181,10 @@
            <p><strong>Intro:</strong> {{ selectedUser.intro || 'Not set' }}</p>
         </div>
     </el-dialog>
+
+    <!-- Advanced Search Dialog -->
     <el-dialog v-model="showAdvancedSearch" title="Advanced Search" width="500px">
+
       <el-form :model="searchForm" label-width="100px">
         <el-form-item label="Title">
           <el-input v-model="searchForm.title" placeholder="Search in title"></el-input>
@@ -209,6 +223,8 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- Move Document Dialog -->
     <el-dialog v-model="showMoveDialog" title="Move Document" width="400px">
       <span>Select Folder:</span>
       <el-select v-model="moveTargetFolderId" placeholder="Select folder" style="width: 100%; margin-top: 10px;">
@@ -222,6 +238,7 @@
     </el-dialog>
   </div>
 </template>
+
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
@@ -240,11 +257,13 @@ const router = useRouter()
 const userStore = useUserStore()
 const viewStore = useViewStore()
 
+// Use store refs for persistent view state
 const { activeFolder, searchKeyword, isSearching, searchForm } = storeToRefs(viewStore)
 
 const documents = ref([])
 const folders = ref([])
 
+// Profile Dialog State
 const showUserProfile = ref(false)
 const selectedUser = ref({})
 const loadingProfile = ref(false)
@@ -253,13 +272,15 @@ const showProfileDialog = ref(false)
 const profileUserId = ref(null)
 
 const openProfile = () => {
+  // Existing ProfileDialog is still used for self-profile
   profileUserId.value = userStore.user.id
   showProfileDialog.value = true
 }
+// openProfileWithUser is no longer needed as handleViewProfile will be used
 
 const handleViewProfile = async (user) => {
     showUserProfile.value = true
-    selectedUser.value = user 
+    selectedUser.value = user // Basic info first
     loadingProfile.value = true
     try {
         if (user.userId) {
@@ -273,8 +294,11 @@ const handleViewProfile = async (user) => {
     }
 }
 
+// Advanced Search State
 const showAdvancedSearch = ref(false)
+// searchForm is now from store
 
+// Move Document State
 const showMoveDialog = ref(false)
 const moveTargetFolderId = ref(null)
 const documentToMove = ref(null)
@@ -308,12 +332,20 @@ const checkUnread = async () => {
 const fetchDocs = async () => {
   if (userStore.user) {
     if (isSearching.value) {
+        // Re-execute search if we are in search mode
+        // This restores search results when navigating back
         if (searchKeyword.value) {
             handleSearch()
         } else {
+            // Advanced search re-execution
+            // Since handleSearch covers Quick Search, we might need performAdvancedSearch logic here too?
+            // Actually, handleSearch logic now covers both simple keyword and advanced (via searchDocumentsAdvanced call).
+            // But if it was a pure advanced search without keyword?
+            // Let's refactor search re-execution.
             if (searchForm.value.title || searchForm.value.keyword || searchForm.value.authorName || searchForm.value.dateRange.length > 0) {
                  performAdvancedSearch()
             } else {
+                // Should not happen if isSearching is true but no criteria
                 documents.value = await getDocumentList()
                 isSearching.value = false
             }
@@ -334,7 +366,7 @@ const init = async () => {
   await userStore.fetchUser()
   if (userStore.user) {
     await Promise.all([fetchDocs(), fetchFoldersList(), checkUnread()])
-    
+    // Poll for unread notifications and refresh docs every 30 seconds
     const interval = setInterval(() => {
       checkUnread()
       fetchDocs()
@@ -354,7 +386,8 @@ const handleLogout = async () => {
 const createNewDoc = async () => {
   try {
     const newDoc = await createDocument({ title: 'Untitled Document', content: '' })
-
+    
+    // If we are in a specific folder, move the new document to that folder
     const currentFolderId = (activeFolder.value !== 'all' && activeFolder.value !== 'root') ? Number(activeFolder.value) : null
     
     if (currentFolderId) {
@@ -383,6 +416,7 @@ const openDoc = async (id) => {
     await getDocument(id)
     router.push(`/document/${id}`)
   } catch (e) {
+    // Error is handled by request interceptor
     fetchDocs()
   }
 }
@@ -405,6 +439,7 @@ const deleteDoc = async (doc) => {
   } catch (e) {}
 }
 
+// Folder Logic
 const handleFolderSelect = (index) => {
   activeFolder.value = index
 }
@@ -430,8 +465,8 @@ const handleFolderCommand = async (command, folder) => {
       await deleteFolder(folder.id)
       ElMessage.success('Deleted')
       fetchFoldersList()
-      activeFolder.value = 'all' 
-      
+      activeFolder.value = 'all' // Reset view
+      // Also refresh docs to update their folder status
       fetchDocs() 
     } catch (e) {}
   } else if (command === 'rename') {
@@ -463,21 +498,35 @@ const filteredDocuments = computed(() => {
   return documents.value.filter(d => String(d.folderId) === activeFolder.value)
 })
 
+// Search Logic
 const handleSearch = async () => {
   if (!searchKeyword.value) {
     fetchDocs()
     isSearching.value = false
     return
   }
-
+  
+  // Use advanced search logic to include folder context
   const params = {
     keyword: searchKeyword.value,
-    folderId: null 
+    folderId: null // We want global search results, filtered by frontend
   }
   
   try {
+     // NOTE: We are using searchDocumentsAdvanced for Quick Search now.
+     // But backend 'searchDocumentsAdvanced' expects 'keyword' to mean 'title OR content'.
+     // My previous update to backend changed 'keyword' behavior to just 'title OR content'.
+     // So passing { keyword: ... } should work.
+     // Let's verify backend mapper XML again.
+     // Backend XML: <if test="keyword ..."> AND (d.title LIKE ... OR d.content LIKE ...) </if>
+     // So this is correct.
+     
      documents.value = await searchDocumentsAdvanced(params)
-
+     
+     // Note: activeFolder.value is NOT reset to 'all' anymore.
+     // The 'filteredDocuments' computed property will handle the filtering based on activeFolder.
+     // So we just update 'documents' with search results, and 'filteredDocuments' shows only those in current folder.
+     
      isSearching.value = true
   } catch (e) {
      console.error(e)
@@ -491,11 +540,17 @@ const openAdvancedSearch = () => {
 const performAdvancedSearch = async () => {
   const params = {
     title: searchForm.value.title,
-    content: searchForm.value.keyword, 
+    content: searchForm.value.keyword, // Map 'keyword' (Content input) to 'content' param for advanced search
     authorName: searchForm.value.authorName,
     sortField: searchForm.value.sortField,
     sortOrder: searchForm.value.sortOrder,
-
+    // Pass folderId only if we want to restrict search to specific folder at backend level
+    // BUT user asked "limit to current view".
+    // If we pass folderId to backend, backend filters it.
+    // If we don't, we get all, and frontend filters it.
+    // Frontend filtering is safer for "current view" consistency.
+    // Let's fetch ALL results matching criteria, then let frontend 'filteredDocuments' do the view filtering.
+    // So we do NOT pass folderId here, so we get global results, and 'filteredDocuments' hides ones not in current folder.
     folderId: null 
   }
   
@@ -507,7 +562,7 @@ const performAdvancedSearch = async () => {
   try {
     documents.value = await searchDocumentsAdvanced(params)
     showAdvancedSearch.value = false
-    
+    // activeFolder.value = 'all' // REMOVED: Do not switch view
     isSearching.value = true
     ElMessage.success('Search completed')
   } catch (e) {
@@ -520,6 +575,7 @@ const clearSearch = () => {
   fetchDocs()
 }
 
+// Move Logic
 const openMoveDialog = (doc) => {
   documentToMove.value = doc
   moveTargetFolderId.value = doc.folderId || 0
@@ -556,6 +612,7 @@ const formatPermission = (permission) => {
   return permission.charAt(0) + permission.slice(1).toLowerCase()
 }
 </script>
+
 <style scoped>
 .header {
   display: flex;
