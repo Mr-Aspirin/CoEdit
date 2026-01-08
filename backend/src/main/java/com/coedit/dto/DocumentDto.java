@@ -9,18 +9,17 @@ public class DocumentDto {
     private String title;
     private String content;
     private Long ownerId;
-    private String ownerName; // Extra field for display
+    private String ownerName; 
     private String ownerAccount;
     private String ownerEmail;
     private String ownerPhone;
     private String ownerIntro;
     private String ownerAvatar;
-    private String permission; // OWNER, ADMIN, EDITOR, VIEWER
+    private String permission; 
     private Long version;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    
-    // Folder info
+
     private Long folderId;
     private String folderName;
 }

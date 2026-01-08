@@ -6,7 +6,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public class BaseController {
-
     @Autowired
     protected UserSessionManager sessionManager;
 

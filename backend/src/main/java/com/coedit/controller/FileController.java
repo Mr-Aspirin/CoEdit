@@ -13,7 +13,6 @@ import java.util.UUID;
 @RequestMapping("/api/file")
 @CrossOrigin(origins = "*")
 public class FileController {
-
     @Value("${file.upload-dir:uploads}")
     private String uploadDir;
 
@@ -36,8 +35,7 @@ public class FileController {
 
         try {
             file.transferTo(new File(dir.getAbsolutePath() + File.separator + filename));
-            // Return URL relative to server root. 
-            // Assuming we map /uploads/** to file system
+
             return Result.success("/uploads/" + filename);
         } catch (IOException e) {
             e.printStackTrace();

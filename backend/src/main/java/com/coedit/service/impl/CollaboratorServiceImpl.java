@@ -21,7 +21,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class CollaboratorServiceImpl implements CollaboratorService {
-
     @Autowired
     private CollaboratorMapper collaboratorMapper;
     
@@ -48,8 +47,7 @@ public class CollaboratorServiceImpl implements CollaboratorService {
         collaborator.setPermission(permission);
         collaborator.setStatus("PENDING");
         collaboratorMapper.insert(collaborator);
-        
-        // Send notification
+
         Document document = documentMapper.findById(documentId);
         String docName = document != null ? document.getTitle() : "#" + documentId;
         notificationService.createNotification(userId, "You have been invited to collaborate on document " + docName, "INVITE", documentId);
@@ -62,11 +60,9 @@ public class CollaboratorServiceImpl implements CollaboratorService {
             throw new RuntimeException("Invitation not found");
         }
         collaboratorMapper.updateStatus(documentId, userId, "ACCEPTED");
-        
-        // Update notification status
+
         notificationService.markInvitationAsAccepted(userId, documentId);
 
-        // Notify Owner and Admins
         User user = userMapper.findById(userId);
         String userName = (user != null) ? (user.getName() != null ? user.getName() : user.getAccount()) : "Unknown User";
         Document document = documentMapper.findById(documentId);
@@ -116,14 +112,11 @@ public class CollaboratorServiceImpl implements CollaboratorService {
         collaboratorMapper.delete(documentId, userId);
 
         if (actorId.equals(userId)) {
-            // User left by themselves
             notifyOwnerAndAdmins(documentId, userName + " has left the document " + docName, "COLLABORATOR_LEFT");
         } else {
-            // User was removed by someone else
             notificationService.createNotification(userId, "You have been removed from document " + docName, "REMOVED_FROM_DOC", documentId);
         }
 
-        // WebSocket notification for real-time removal
         Map<String, Object> message = new HashMap<>();
         message.put("type", "COLLABORATOR_REMOVED");
         message.put("targetUserId", userId);
@@ -134,11 +127,9 @@ public class CollaboratorServiceImpl implements CollaboratorService {
     private void notifyOwnerAndAdmins(Long documentId, String content, String type) {
         Document document = documentMapper.findById(documentId);
         if (document == null) return;
-        
-        // Notify Owner
+
         notificationService.createNotification(document.getOwnerId(), content, type, documentId);
-        
-        // Notify Admins
+
         List<DocumentCollaborator> collaborators = collaboratorMapper.findByDocumentId(documentId);
         for (DocumentCollaborator dc : collaborators) {
             if ("ACCEPTED".equals(dc.getStatus()) && "ADMIN".equals(dc.getPermission())) {
@@ -155,7 +146,6 @@ public class CollaboratorServiceImpl implements CollaboratorService {
         String docName = document != null ? document.getTitle() : "#" + documentId;
         notificationService.createNotification(userId, "Your permission for document " + docName + " has been updated to " + permission, "PERMISSION_UPDATE", documentId);
 
-        // WebSocket notification for real-time permission update
         Map<String, Object> message = new HashMap<>();
         message.put("type", "PERMISSION_UPDATE");
         message.put("targetUserId", userId);

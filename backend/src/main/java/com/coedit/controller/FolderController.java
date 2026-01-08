@@ -17,7 +17,6 @@ public class FolderController extends BaseController {
     @Autowired
     private FolderService folderService;
 
-
     @PostMapping("/create")
     public Result<Folder> create(@RequestBody Folder folder, HttpServletRequest request) {
         UserDto user = getUser(request);

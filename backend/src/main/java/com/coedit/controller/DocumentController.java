@@ -16,10 +16,8 @@ import java.util.Map;
 @RequestMapping("/api/document")
 @CrossOrigin(origins = "*")
 public class DocumentController extends BaseController {
-
     @Autowired
     private DocumentService documentService;
-
 
     @PostMapping("/create")
     public Result<DocumentDto> create(@RequestBody DocumentDto documentDto, HttpServletRequest request) {

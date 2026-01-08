@@ -24,7 +24,6 @@ import java.util.regex.Pattern;
 
 @Service
 public class CommentServiceImpl implements CommentService {
-
     @Autowired
     private CommentMapper commentMapper;
 
@@ -43,19 +42,16 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Transactional
     public Comment addComment(Comment comment) {
-        // Permission check
         Document doc = documentMapper.findById(comment.getDocumentId());
         if (doc == null) {
             throw new RuntimeException("Document not found");
         }
         
         boolean hasPermission = false;
-        
-        // 1. Is Owner
+
         if (doc.getOwnerId().equals(comment.getUserId())) {
             hasPermission = true;
         } else {
-            // 2. Is Collaborator
             DocumentCollaborator collaborator = collaboratorMapper.findByDocAndUser(comment.getDocumentId(), comment.getUserId());
             if (collaborator != null && "ACCEPTED".equals(collaborator.getStatus())) {
                 hasPermission = true;
@@ -95,7 +91,6 @@ public class CommentServiceImpl implements CommentService {
                     notificationService.createNotification(mentionedUserId, content, "MENTION", comment.getDocumentId());
                 }
             } catch (NumberFormatException e) {
-                // ignore
             }
         }
     }
@@ -105,7 +100,6 @@ public class CommentServiceImpl implements CommentService {
         List<CommentDto> comments = commentMapper.selectByDocumentId(documentId);
         if (comments == null || comments.isEmpty()) return comments;
 
-        // Collect all mentioned user IDs
         Set<Long> userIds = new HashSet<>();
         Pattern pattern = Pattern.compile("@\\{uid:(\\d+)\\}");
 
@@ -116,7 +110,6 @@ public class CommentServiceImpl implements CommentService {
                     try {
                         userIds.add(Long.parseLong(matcher.group(1)));
                     } catch (NumberFormatException e) {
-                        // ignore
                     }
                 }
             }
@@ -124,7 +117,6 @@ public class CommentServiceImpl implements CommentService {
 
         if (userIds.isEmpty()) return comments;
 
-        // Fetch users
         Map<Long, String> userNames = new HashMap<>();
         for (Long uid : userIds) {
             com.coedit.entity.User u = userMapper.findById(uid);
@@ -135,7 +127,6 @@ public class CommentServiceImpl implements CommentService {
             }
         }
 
-        // Populate DTOs
         for (CommentDto comment : comments) {
             if (comment.getContent() != null) {
                  Matcher matcher = pattern.matcher(comment.getContent());
@@ -165,16 +156,13 @@ public class CommentServiceImpl implements CommentService {
 
         boolean canDelete = false;
 
-        // 1. Author
         if (comment.getUserId().equals(userId)) {
             canDelete = true;
         } else {
-            // 2. Document Owner
             Document doc = documentMapper.findById(comment.getDocumentId());
             if (doc != null && doc.getOwnerId().equals(userId)) {
                 canDelete = true;
             } else {
-                // 3. Document Admin
                 DocumentCollaborator collaborator = collaboratorMapper.findByDocAndUser(comment.getDocumentId(), userId);
                 if (collaborator != null && "ADMIN".equals(collaborator.getPermission())) {
                     canDelete = true;

@@ -20,8 +20,6 @@
         </el-form-item>
       </el-form>
     </el-card>
-
-    <!-- Forgot Password Dialog -->
     <el-dialog v-model="showForgotPassword" title="Reset Password" width="400px">
       <el-form :model="resetForm" label-width="120px">
         <template v-if="!securityQuestion">
@@ -32,7 +30,6 @@
               <el-button type="primary" @click="fetchQuestion">Next</el-button>
            </el-form-item>
         </template>
-        
         <template v-else>
            <el-form-item label="Account">
               <el-input v-model="resetForm.account" disabled />
@@ -55,7 +52,6 @@
     </el-dialog>
   </div>
 </template>
-
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -71,7 +67,6 @@ const form = ref({
   password: ''
 })
 
-// Forgot Password State
 const showForgotPassword = ref(false)
 const resetForm = ref({
   account: '',
@@ -93,8 +88,6 @@ const fetchQuestion = async () => {
       ElMessage.error('No security question set for this account')
     }
   } catch (error) {
-    // Error handled in interceptor or here
-    // ElMessage.error('Account not found')
   }
 }
 
@@ -109,7 +102,6 @@ const handleResetPassword = async () => {
     showForgotPassword.value = false
     resetFlow()
   } catch (error) {
-    // handled
   }
 }
 
@@ -133,7 +125,6 @@ const handleLogin = async () => {
   }
 }
 </script>
-
 <style scoped>
 .login-container {
   display: flex;

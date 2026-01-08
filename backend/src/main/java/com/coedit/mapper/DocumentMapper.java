@@ -17,10 +17,7 @@ public interface DocumentMapper {
     
     List<Document> searchDocuments(@Param("keyword") String keyword);
 
-    // Advanced Search
-    // params can contain: userId, folderId, keyword, authorName, startDate, endDate, sortField, sortOrder
     List<Document> searchDocumentsAdvanced(Map<String, Object> params);
 
-    // Folder Management
     int insertOrUpdateDocumentFolder(@Param("userId") Long userId, @Param("documentId") Long documentId, @Param("folderId") Long folderId);
 }

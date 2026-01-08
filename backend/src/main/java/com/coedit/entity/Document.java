@@ -12,8 +12,7 @@ public class Document {
     private Long version;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    
-    // Non-database field, used for query result
+
     private String permission;
     private Long folderId;
     private String folderName;

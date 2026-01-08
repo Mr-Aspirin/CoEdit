@@ -5,16 +5,14 @@ import lombok.Data;
 @Data
 public class DocEditMessage {
     private Long docId;
-    private String content; // Could be delta or full HTML
+    private String content; 
     private Long version;
     private Long senderId;
     private String senderName;
-    private Object delta; // For Quill delta
-    
-    // New fields for collaboration
-    private String type; // "EDIT", "CURSOR"
+    private Object delta; 
+
+    private String type; 
     private Integer cursorIndex;
     private Integer cursorLength;
-    private String senderColor; // Optional, or determined by frontend
-
+    private String senderColor; 
 }

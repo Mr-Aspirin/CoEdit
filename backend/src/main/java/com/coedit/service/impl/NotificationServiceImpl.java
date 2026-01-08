@@ -12,7 +12,6 @@ import java.util.List;
 
 @Service
 public class NotificationServiceImpl implements NotificationService {
-
     @Autowired
     private NotificationMapper notificationMapper;
     

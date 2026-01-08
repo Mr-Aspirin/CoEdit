@@ -3,7 +3,6 @@
     <div class="header">
       <h3>Comments</h3>
     </div>
-    
     <div class="comment-list">
       <div v-if="comments.length === 0" class="empty-text">No comments yet</div>
       <div v-for="comment in comments" :key="comment.id" class="comment-item">
@@ -36,7 +35,6 @@
         <div class="comment-time">{{ formatTime(comment.createdAt) }}</div>
       </div>
     </div>
-    
     <div class="comment-input-area">
        <el-input
          ref="commentInputRef"
@@ -50,7 +48,6 @@
          @keydown.down.prevent="navigateList(1)"
          @keydown.enter.prevent="selectCurrentItem"
        />
-       
        <div v-if="showMentions && filteredCollaborators.length > 0" class="mention-list">
           <div 
             v-for="(user, index) in filteredCollaborators" 
@@ -68,14 +65,12 @@
             <span style="margin-left: 5px">{{ user.name || user.account }}</span>
           </div>
        </div>
-       
        <div style="text-align: right; margin-top: 5px;">
          <el-button type="primary" size="small" @click="submitComment" :disabled="!newComment.trim()">Send</el-button>
        </div>
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { addComment, deleteComment, getComments as fetchCommentsApi } from '../api/comment'
@@ -137,24 +132,16 @@ const formatTime = (time) => {
 }
 
 const formatContent = (comment) => {
-    // Basic XSS protection could be added here
     const safeContent = comment.content
 
-    // Replace @{uid:123} with span
     return safeContent.replace(/@\{uid:(\d+)\}/g, (match, uid) => {
-        // Debug log
-        // console.log('Formatting comment:', comment.id, 'uid:', uid, 'mentionedUsers:', comment.mentionedUsers)
-        
-        // 1. Try mentionedUsers from backend
         if (comment.mentionedUsers && comment.mentionedUsers[uid]) {
              const name = comment.mentionedUsers[uid]
              return `<span class="mention" data-user-id="${uid}" style="color: #409EFF; font-weight: bold; cursor: pointer;">@${name}</span>`
         }
-        
-        // Fallback...
-        // Combine collaborators and owner for lookup
+
         let allUsers = []
-        // Add collaborators (only ACCEPTED)
+        
         const acceptedCollaborators = props.collaborators.filter(c => c.status === 'ACCEPTED')
         allUsers = [...acceptedCollaborators]
         
@@ -175,8 +162,6 @@ const handleContentClick = (e) => {
     if (target) {
         const userId = target.getAttribute('data-user-id')
         if (userId) {
-            // Find user details to pass consistent object
-            // Combine collaborators and owner for lookup
             let allUsers = []
             const acceptedCollaborators = props.collaborators.filter(c => c.status === 'ACCEPTED')
             allUsers = [...acceptedCollaborators]
@@ -190,7 +175,6 @@ const handleContentClick = (e) => {
             if (user) {
                 emit('view-profile', user)
             } else {
-                // Fallback if user not found in local list (should be rare as we just rendered it)
                  emit('view-profile', { userId })
             }
         }
@@ -200,14 +184,11 @@ const handleContentClick = (e) => {
 const canDelete = (comment) => {
     if (!userStore.user) return false
     const currentUserId = userStore.user.id
-    
-    // 1. Author
+
     if (String(comment.userId) === String(currentUserId)) return true
-    
-    // 2. Document Owner
+
     if (String(props.ownerId) === String(currentUserId)) return true
-    
-    // 3. Document Admin
+
     const myCollab = props.collaborators.find(c => String(c.userId) === String(currentUserId))
     if (myCollab && myCollab.permission === 'ADMIN') return true
     
@@ -225,30 +206,23 @@ const handleDelete = async (commentId) => {
         ElMessage.success('Deleted')
         fetchComments()
     } catch (e) {
-        // cancelled or failed
     }
 }
 
-// Mention logic
 const filteredCollaborators = computed(() => {
-    // Current user ID
     const currentUserId = userStore.user ? userStore.user.id : null
-    
-    // Combine collaborators and owner
+
     let allUsers = []
-    
-    // Add collaborators (only ACCEPTED)
+
     const acceptedCollaborators = props.collaborators.filter(c => c.status === 'ACCEPTED')
     allUsers = [...acceptedCollaborators]
     
     if (props.ownerProfile) {
-        // Avoid duplicate if owner is somehow in collaborators list
         if (!allUsers.find(u => String(u.userId) === String(props.ownerProfile.userId))) {
             allUsers.unshift(props.ownerProfile)
         }
     }
-    
-    // Filter out current user first
+
     const others = allUsers.filter(c => String(c.userId) !== String(currentUserId))
 
     if (!mentionQuery.value) return others
@@ -271,9 +245,8 @@ const handleInput = (val) => {
         const lastAt = textBefore.lastIndexOf('@')
         
         if (lastAt !== -1) {
-            // Check text between @ and cursor
             const query = textBefore.slice(lastAt + 1)
-            // If query contains space, we assume mention is done/invalid
+            
             if (query.includes(' ')) {
                 showMentions.value = false
                 mentionQuery.value = ''
@@ -283,7 +256,6 @@ const handleInput = (val) => {
                 activeIndex.value = 0
             }
         } else {
-            // No @ found before cursor
             showMentions.value = false
             mentionQuery.value = ''
         }
@@ -292,9 +264,7 @@ const handleInput = (val) => {
 
 const insertMention = (user) => {
     const name = user.name || user.account
-    
-    // We need to replace the query part with the name
-    // Re-calculate position to be safe
+
     const el = commentInputRef.value.textarea
     const cursor = el.selectionStart
     const textBefore = newComment.value.slice(0, cursor)
@@ -304,8 +274,7 @@ const insertMention = (user) => {
         const before = newComment.value.slice(0, lastAt)
         const after = newComment.value.slice(cursor)
         newComment.value = before + '@' + name + ' ' + after
-        
-        // Move cursor to end of inserted name
+
         nextTick(() => {
             el.focus()
             const newCursorPos = lastAt + 1 + name.length + 1
@@ -338,19 +307,16 @@ const submitComment = async () => {
 
     if (!newComment.value.trim()) return
 
-    // Permission check
     if (!userStore.user) {
         ElMessage.error('Please login first')
         return
     }
 
     try {
-        // Process mentions
         let processedContent = newComment.value
-        
-        // Combine collaborators and owner for lookup
+
         let allUsers = []
-        // Add collaborators (only ACCEPTED)
+        
         const acceptedCollaborators = props.collaborators.filter(c => c.status === 'ACCEPTED')
         allUsers = [...acceptedCollaborators]
         
@@ -360,15 +326,12 @@ const submitComment = async () => {
             }
         }
 
-        // Sort collabs by name length to avoid partial matches being replaced incorrectly
         const sortedCollabs = allUsers.sort((a, b) => {
              const nameA = a.name || a.account
              const nameB = b.name || b.account
              return nameB.length - nameA.length
         })
 
-        // Replace @Name with @{uid:ID}
-        // We use a regex that matches @Name followed by boundary
         processedContent = processedContent.replace(/@([^\s]+)/g, (match, name) => {
             const col = sortedCollabs.find(c => (c.name || c.account) === name)
             if (col) {
@@ -385,7 +348,6 @@ const submitComment = async () => {
     }
 }
 </script>
-
 <style scoped>
 .comment-section {
     display: flex;
@@ -433,7 +395,7 @@ const submitComment = async () => {
     font-size: 13px;
     margin-left: 5px;
     cursor: pointer;
-    color: #333; /* Default color */
+    color: #333;  
 }
 .username:hover {
     color: #409EFF;

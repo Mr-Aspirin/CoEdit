@@ -19,7 +19,6 @@ import java.util.Map;
 @RequestMapping("/api")
 @CrossOrigin(origins = "*")
 public class CommentController {
-
     @Autowired
     private CommentService commentService;
 
